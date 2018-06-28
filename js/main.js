@@ -212,6 +212,9 @@ addMarkersToMap = (restaurants = self.restaurants) => {
   });
 }
 
+/**
+ * Register listener to scroll and load for images
+ */
 registerListener = (event, func) => {
     if (window.addEventListener) {
         window.addEventListener(event, func)
@@ -220,6 +223,9 @@ registerListener = (event, func) => {
     }
 } 
 
+/**
+ * Loads image only if image is in view port
+ */
 lazyLoad = () => {
     for(var i=0; i<lazy.length; i++){
         if(isInViewport(lazy[i])){
@@ -233,10 +239,16 @@ lazyLoad = () => {
     cleanLazy();
 }
 
+/**
+ * Remove loaded images from the array.
+ */
 cleanLazy = () => {
     lazy = Array.prototype.filter.call(lazy, function(l){ return l.getAttribute('data-src');});
 }
 
+/**
+ * Check for rectangle for image and see if its in view port
+ */ 
 isInViewport = (el) => {
     var rect = el.getBoundingClientRect();
     
