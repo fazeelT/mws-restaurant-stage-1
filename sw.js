@@ -60,6 +60,10 @@ self.addEventListener('fetch', function(event) {
     
       return;  
   }
+    if (requestUrl.pathname.endsWith('/restaurants')) {
+      event.respondWith(serveData(event.request));
+      return;
+    }
 
   event.respondWith(
     caches.match(event.request).then(function(response) {

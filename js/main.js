@@ -3,14 +3,20 @@ let restaurants,
   cuisines
 var map
 var markers = []
+let lazy = [];
 
 /**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
  */
 document.addEventListener('DOMContentLoaded', (event) => {
   registerServiceWorker();
-  fetchNeighborhoods();
-  fetchCuisines();
+//  fetchNeighborhoods();
+//  fetchCuisines();
+  fetchNeighbourhoodsAndCuisines();
+    
+registerListener('load', lazyLoad);
+registerListener('scroll', lazyLoad);
+registerListener('resize', lazyLoad);
 });
 
 registerServiceWorker = () => {
@@ -21,6 +27,22 @@ registerServiceWorker = () => {
     console.log('ServiceWorker registration successful with scope: ', reg.scope);
   });
 };
+
+/**
+ * Fetch all neighborhoods and set their HTML.
+ */
+fetchNeighbourhoodsAndCuisines = () => {
+  DBHelper.fetchNeighbourhoodsAndCuisines((error, neighborhoods, cuisines) => {
+    if (error) { // Got an error
+      console.error(error);
+    } else {
+      self.neighborhoods = neighborhoods;
+      fillNeighborhoodsHTML();
+      self.cuisines = cuisines;
+      fillCuisinesHTML();    
+    }
+  });
+}
 
 /**
  * Fetch all neighborhoods and set their HTML.
@@ -151,8 +173,9 @@ createRestaurantHTML = (restaurant) => {
   const image = document.createElement('img');
   image.className = 'restaurant-img';
   image.alt = restaurant.name + " image";
-  image.src = DBHelper.imageUrlForRestaurant(restaurant);
+  image.setAttribute('data-src', DBHelper.imageUrlForRestaurant(restaurant));
   li.append(image);
+  lazy.push(image);
 
   const name = document.createElement('h1');
   name.innerHTML = restaurant.name;
@@ -187,4 +210,40 @@ addMarkersToMap = (restaurants = self.restaurants) => {
     });
     self.markers.push(marker);
   });
+}
+
+registerListener = (event, func) => {
+    if (window.addEventListener) {
+        window.addEventListener(event, func)
+    } else {
+        window.attachEvent('on' + event, func)
+    }
+} 
+
+lazyLoad = () => {
+    for(var i=0; i<lazy.length; i++){
+        if(isInViewport(lazy[i])){
+            if (lazy[i].getAttribute('data-src')){
+                lazy[i].src = lazy[i].getAttribute('data-src');
+                lazy[i].removeAttribute('data-src');
+            }
+        }
+    }
+    
+    cleanLazy();
+}
+
+cleanLazy = () => {
+    lazy = Array.prototype.filter.call(lazy, function(l){ return l.getAttribute('data-src');});
+}
+
+isInViewport = (el) => {
+    var rect = el.getBoundingClientRect();
+    
+    return (
+        rect.bottom >= 0 && 
+        rect.right >= 0 && 
+        rect.top <= (window.innerHeight || document.documentElement.clientHeight) && 
+        rect.left <= (window.innerWidth || document.documentElement.clientWidth)
+     );
 }
