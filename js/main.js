@@ -10,12 +10,12 @@ let lazy = [];
  */
 document.addEventListener('DOMContentLoaded', (event) => {
   registerServiceWorker();
-
   fetchNeighbourhoodsAndCuisines();
     
-registerListener('load', lazyLoad);
-registerListener('scroll', lazyLoad);
-registerListener('resize', lazyLoad);
+  registerListener('load', lazyLoad);
+  registerListener('scroll', lazyLoad);
+  registerListener('resize', lazyLoad);
+    
 });
 
 registerServiceWorker = () => {
@@ -28,7 +28,7 @@ registerServiceWorker = () => {
 };
 
 /**
- * Fetch all neighborhoods and set their HTML.
+ * Fetch all neighborhoods and cuisines and set their HTML.
  */
 fetchNeighbourhoodsAndCuisines = () => {
   DBHelper.fetchNeighbourhoodsAndCuisines((error, neighborhoods, cuisines) => {

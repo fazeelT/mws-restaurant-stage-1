@@ -5,6 +5,7 @@ var contentDataCache = 'restaurants-review-content-data';
 var idbDBName = 'RestaurantReviewsDB';
 var idbStoreName = 'RestaurantReviews';
 var serviceUrl = "http://localhost:1337";
+var serviceResponseContentType = "application/json";
 
 var allCaches = [
   staticCacheName,
@@ -67,24 +68,28 @@ self.addEventListener('fetch', function(event) {
       event.respondWith(servePhoto(event.request));
       return;
     }
+      
     if (requestUrl.pathname.startsWith('/data/')) {
       event.respondWith(serveData(event.request));
       return;
     }
+      
     if (requestUrl.pathname.startsWith('/restaurant.html')) {
       event.respondWith(serveData(event.request));
       return;
     }
   }
+    
   if (['https://maps.googleapis.com', 'https://maps.gstatic.com', 'c'].indexOf(requestUrl.origin) >= 0) {
       event.respondWith(serveData(event.request));
     
       return;  
   }
-    if (requestUrl.origin === serviceUrl) {
-      event.respondWith(serveDataFromIndexDB(event.request));
-      return;
-    }
+    
+  if (requestUrl.origin === serviceUrl) {
+    event.respondWith(serveDataFromIndexDB(event.request));
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then(function(response) {
@@ -143,11 +148,10 @@ function toResponse(data) {
   if(!data) {
       return null;
   }
-  const contentType = 'application/json';
     
   const myHeaders = new Headers({
     "Content-Length": String(data.size),
-    "Content-Type": contentType,
+    "Content-Type": serviceResponseContentType,
     "X-Custom-Header": "ProcessThisImmediately",
   });
 
@@ -158,7 +162,7 @@ function toResponse(data) {
     'statusText' : 'OKS',
   };
     
-  var blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});    
+  var blob = new Blob([JSON.stringify(data)], {type : serviceResponseContentType});    
     
   return new Promise((resolve, reject) => resolve(new Response(blob, init)));  
 }
