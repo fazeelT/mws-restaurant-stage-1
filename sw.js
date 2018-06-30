@@ -2,11 +2,17 @@
 var staticCacheName = 'restaurants-review-static-v1';
 var contentImgsCache = 'restaurants-review-content-imgs';
 var contentDataCache = 'restaurants-review-content-data';
+var idbDBName = 'RestaurantReviewsDB';
+var idbStoreName = 'RestaurantReviews';
+var serviceUrl = "http://localhost:1337";
+
 var allCaches = [
   staticCacheName,
   contentImgsCache,
   contentDataCache
 ];
+
+var idb;
 
 self.addEventListener('install', function(event) {
 
@@ -36,7 +42,22 @@ self.addEventListener('activate', function(event) {
       );
     })
   );
+  event.waitUntil(
+    createDB()
+  );
 });
+
+function createDB() {
+  return new Promise(function(resolve,reject){
+    idb = indexedDB.open(idbDBName, 1);  
+    idb.onupgradeneeded = function(upgradeDB) {
+      var db = upgradeDB.target.result;
+      db.createObjectStore(idbStoreName);
+    }   
+    
+    idb.onsuccess = resolve;
+  });      
+}
 
 self.addEventListener('fetch', function(event) {
   var requestUrl = new URL(event.request.url);
@@ -60,8 +81,8 @@ self.addEventListener('fetch', function(event) {
     
       return;  
   }
-    if (requestUrl.pathname.endsWith('/restaurants')) {
-      event.respondWith(serveData(event.request));
+    if (requestUrl.origin === serviceUrl) {
+      event.respondWith(serveDataFromIndexDB(event.request));
       return;
     }
 
@@ -86,6 +107,60 @@ function serveData(request) {
         return response || networkFetch;
     });
   });
+}
+
+function getTransaction() {
+    return idb.result.transaction([idbStoreName], 'readwrite').objectStore(idbStoreName)
+}
+
+function serveDataFromIndexDB(requestObject) {
+    
+  return new Promise(function(resolve,reject) {
+    var storageUrl = requestObject.url;
+    var objectStore = getTransaction();
+    var request = objectStore.get(storageUrl);
+    request.onsuccess = function(event) {
+      // Get the old value that we want to update
+      var data = event.target.result;
+      var networkFetch = fetch(storageUrl).then(function(networkResponse) {
+        // Put this updated object back into the database.
+        networkResponse.clone().json().then((blob) => {
+          getTransaction().add(blob, storageUrl);           
+        });
+        
+        return networkResponse;
+      });
+          
+        
+      return resolve(toResponse(data) || networkFetch); 
+    }
+  });
+  
+}
+
+function toResponse(data) {
+  
+  if(!data) {
+      return null;
+  }
+  const contentType = 'application/json';
+    
+  const myHeaders = new Headers({
+    "Content-Length": String(data.size),
+    "Content-Type": contentType,
+    "X-Custom-Header": "ProcessThisImmediately",
+  });
+
+  const init = {
+    'content-type': 'application/json',
+    'headers': myHeaders,
+    'status' : 200,
+    'statusText' : 'OKS',
+  };
+    
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});    
+    
+  return new Promise((resolve, reject) => resolve(new Response(blob, init)));  
 }
 
 function servePhoto(request) {

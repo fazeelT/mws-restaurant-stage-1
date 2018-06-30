@@ -10,8 +10,7 @@ let lazy = [];
  */
 document.addEventListener('DOMContentLoaded', (event) => {
   registerServiceWorker();
-//  fetchNeighborhoods();
-//  fetchCuisines();
+
   fetchNeighbourhoodsAndCuisines();
     
 registerListener('load', lazyLoad);
@@ -45,20 +44,6 @@ fetchNeighbourhoodsAndCuisines = () => {
 }
 
 /**
- * Fetch all neighborhoods and set their HTML.
- */
-fetchNeighborhoods = () => {
-  DBHelper.fetchNeighborhoods((error, neighborhoods) => {
-    if (error) { // Got an error
-      console.error(error);
-    } else {
-      self.neighborhoods = neighborhoods;
-      fillNeighborhoodsHTML();
-    }
-  });
-}
-
-/**
  * Set neighborhoods HTML.
  */
 fillNeighborhoodsHTML = (neighborhoods = self.neighborhoods) => {
@@ -68,20 +53,6 @@ fillNeighborhoodsHTML = (neighborhoods = self.neighborhoods) => {
     option.innerHTML = neighborhood;
     option.value = neighborhood;
     select.append(option);
-  });
-}
-
-/**
- * Fetch all cuisines and set their HTML.
- */
-fetchCuisines = () => {
-  DBHelper.fetchCuisines((error, cuisines) => {
-    if (error) { // Got an error!
-      console.error(error);
-    } else {
-      self.cuisines = cuisines;
-      fillCuisinesHTML();
-    }
   });
 }
 
