@@ -11,11 +11,11 @@ let lazy = [];
 document.addEventListener('DOMContentLoaded', (event) => {
   registerServiceWorker();
   fetchNeighbourhoodsAndCuisines();
-    
+
   registerListener('load', lazyLoad);
   registerListener('scroll', lazyLoad);
   registerListener('resize', lazyLoad);
-    
+
 });
 
 registerServiceWorker = () => {
@@ -38,7 +38,7 @@ fetchNeighbourhoodsAndCuisines = () => {
       self.neighborhoods = neighborhoods;
       fillNeighborhoodsHTML();
       self.cuisines = cuisines;
-      fillCuisinesHTML();    
+      fillCuisinesHTML();
     }
   });
 }
@@ -192,7 +192,7 @@ registerListener = (event, func) => {
     } else {
         window.attachEvent('on' + event, func)
     }
-} 
+}
 
 /**
  * Loads image only if image is in view port
@@ -206,7 +206,7 @@ lazyLoad = () => {
             }
         }
     }
-    
+
     cleanLazy();
 }
 
@@ -219,14 +219,14 @@ cleanLazy = () => {
 
 /**
  * Check for rectangle for image and see if its in view port
- */ 
+ */
 isInViewport = (el) => {
     var rect = el.getBoundingClientRect();
-    
+
     return (
-        rect.bottom >= 0 && 
-        rect.right >= 0 && 
-        rect.top <= (window.innerHeight || document.documentElement.clientHeight) && 
+        rect.bottom >= 0 &&
+        rect.right >= 0 &&
+        rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
         rect.left <= (window.innerWidth || document.documentElement.clientWidth)
      );
 }

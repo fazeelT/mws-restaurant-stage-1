@@ -2,20 +2,24 @@
 var staticCacheName = 'restaurants-review-static-v1';
 var contentImgsCache = 'restaurants-review-content-imgs';
 var contentDataCache = 'restaurants-review-content-data';
+var pendingSaveReviewsCache = 'restaurants-review-pending-save';
 var idbDBName = 'RestaurantReviewsDB';
 var idbStoreName = 'RestaurantReviews';
 var serviceUrl = "http://localhost:1337";
 var serviceResponseContentType = "application/json";
+var syncStore = {};
 
 var allCaches = [
   staticCacheName,
   contentImgsCache,
-  contentDataCache
+  contentDataCache,
+  pendingSaveReviewsCache
 ];
 
 var idb;
 
 self.addEventListener('install', function(event) {
+  event.waitUntil(self.skipWaiting()); // Activate worker immediately
 
   event.waitUntil(
     caches.open(staticCacheName).then(function(cache) {
@@ -31,6 +35,7 @@ self.addEventListener('install', function(event) {
 });
 
 self.addEventListener('activate', function(event) {
+  event.waitUntil(clients.claim()); // Become available to all pages
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(
@@ -50,14 +55,14 @@ self.addEventListener('activate', function(event) {
 
 function createDB() {
   return new Promise(function(resolve,reject){
-    idb = indexedDB.open(idbDBName, 1);  
+    idb = indexedDB.open(idbDBName, 1);
     idb.onupgradeneeded = function(upgradeDB) {
       var db = upgradeDB.target.result;
       db.createObjectStore(idbStoreName);
-    }   
-    
+    }
+
     idb.onsuccess = resolve;
-  });      
+  });
 }
 
 self.addEventListener('fetch', function(event) {
@@ -68,24 +73,29 @@ self.addEventListener('fetch', function(event) {
       event.respondWith(servePhoto(event.request));
       return;
     }
-      
+
     if (requestUrl.pathname.startsWith('/data/')) {
       event.respondWith(serveData(event.request));
       return;
     }
-      
+
     if (requestUrl.pathname.startsWith('/restaurant.html')) {
       event.respondWith(serveData(event.request));
       return;
     }
   }
-    
+
   if (['https://maps.googleapis.com', 'https://maps.gstatic.com', 'c'].indexOf(requestUrl.origin) >= 0) {
       event.respondWith(serveData(event.request));
-    
-      return;  
+
+      return;
   }
-    
+
+  if (event.request.method === 'POST' && requestUrl.pathname.startsWith('/reviews')) {
+    event.respondWith(cacheReviewsPendingSave(event.request));
+    return;
+  }
+
   if (requestUrl.origin === serviceUrl) {
     event.respondWith(serveDataFromIndexDB(event.request));
     return;
@@ -98,6 +108,14 @@ self.addEventListener('fetch', function(event) {
   );
 });
 
+function cacheReviewsPendingSave(request) {
+  return caches.open(pendingSaveReviewsCache).then(function(cache) {
+    request.json().then((postRequestBody) => {
+      cache.put(postRequestBody, postRequestBody);
+    });
+  });
+}
+
 function serveData(request) {
   var storageUrl = request.url;
 
@@ -105,10 +123,10 @@ function serveData(request) {
     return cache.match(storageUrl).then(function(response) {
         var networkFetch = fetch(request).then(function(networkResponse) {
             cache.put(storageUrl, networkResponse.clone())
-            
+
             return networkResponse;
         });
-        
+
         return response || networkFetch;
     });
   });
@@ -119,7 +137,7 @@ function getTransaction() {
 }
 
 function serveDataFromIndexDB(requestObject) {
-    
+
   return new Promise(function(resolve,reject) {
     var storageUrl = requestObject.url;
     var objectStore = getTransaction();
@@ -130,25 +148,25 @@ function serveDataFromIndexDB(requestObject) {
       var networkFetch = fetch(storageUrl).then(function(networkResponse) {
         // Put this updated object back into the database.
         networkResponse.clone().json().then((blob) => {
-          getTransaction().add(blob, storageUrl);           
+          getTransaction().put(blob, storageUrl);
         });
-        
+
         return networkResponse;
       });
-          
-        
-      return resolve(toResponse(data) || networkFetch); 
+
+
+      return resolve(toResponse(data) || networkFetch);
     }
   });
-  
+
 }
 
 function toResponse(data) {
-  
+
   if(!data) {
       return null;
   }
-    
+
   const myHeaders = new Headers({
     "Content-Length": String(data.size),
     "Content-Type": serviceResponseContentType,
@@ -161,10 +179,10 @@ function toResponse(data) {
     'status' : 200,
     'statusText' : 'OKS',
   };
-    
-  var blob = new Blob([JSON.stringify(data)], {type : serviceResponseContentType});    
-    
-  return new Promise((resolve, reject) => resolve(new Response(blob, init)));  
+
+  var blob = new Blob([JSON.stringify(data)], {type : serviceResponseContentType});
+
+  return new Promise((resolve, reject) => resolve(new Response(blob, init)));
 }
 
 function servePhoto(request) {
@@ -186,4 +204,38 @@ self.addEventListener('message', function(event) {
   if (event.data.action === 'skipWaiting') {
     self.skipWaiting();
   }
+  if(event.data !== null && typeof event.data === 'object') {
+    if(event.data.type === 'sync') {
+      // in this way, you can decide your tag
+      const id = event.data.id || uuid()
+      // pass the port into the memory stor
+      syncStore[id] = Object.assign({port: event.ports[0]}, event.data)
+      self.registration.sync.register(id)
+    }
+  }
 });
+
+function uuid() {
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+}
+
+self.addEventListener('sync', event => {
+  const {url, options, port, parse} = syncStore[event.tag] || {}
+  // delete the memory
+  delete syncStore[event.tag]
+  event.waitUntil(fetch(url, options)
+    .then(response => response.json())
+    .then(data => {
+          // when success postmessage back
+          port.postMessage(data)
+    })
+    .catch(error => {
+      port.postMessage({error: error.message})
+    })
+  )
+})

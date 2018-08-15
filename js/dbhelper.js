@@ -4,11 +4,19 @@
 class DBHelper {
   /**
    * Database URL.
-   * Change this to restaurants.json file location on your server.
    */
-  static get DATABASE_URL() {
+  static get RESTAURANTS_URL() {
     const port = 1337 // Change this to your server port
     return `http://localhost:${port}/restaurants`;
+  }
+
+  /**
+   * Restaurant Reviews URL.
+   * Change this to restaurants.json file location on your server.
+   */
+  static get RESTAURANT_REVIEWS_URL() {
+    const port = 1337 // Change this to your server port
+    return `http://localhost:${port}/reviews`;
   }
 
 
@@ -16,12 +24,48 @@ class DBHelper {
    * Fetch all restaurants.
    */
   static fetchRestaurants(callback, id) {
-    let xhr = new XMLHttpRequest();        
-    xhr.open('GET', id ? DBHelper.DATABASE_URL + `/${id}` :  DBHelper.DATABASE_URL);
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', id ? DBHelper.RESTAURANTS_URL + `/${id}` :  DBHelper.RESTAURANTS_URL);
     xhr.onload = () => {
       if (xhr.status === 200) { // Got a success response from server!
         const restaurant = JSON.parse(xhr.responseText);
         callback(null, restaurant);
+      } else { // Oops!. Got an error from server.
+        const error = (`Request failed. Returned status of ${xhr.status}`);
+        callback(error, null);
+      }
+    };
+    xhr.send();
+  }
+
+  /**
+   * Fetch all restaurants.
+   */
+  static fetchRestaurantReviews(id, callback) {
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', id ? DBHelper.RESTAURANT_REVIEWS_URL + `/?restaurant_id=${id}` :  DBHelper.RESTAURANT_REVIEWS_URL);
+    xhr.onload = () => {
+      if (xhr.status === 200) { // Got a success response from server!
+        const restaurantReviews = JSON.parse(xhr.responseText);
+        callback(null, restaurantReviews);
+      } else { // Oops!. Got an error from server.
+        const error = (`Request failed. Returned status of ${xhr.status}`);
+        callback(error, null);
+      }
+    };
+    xhr.send();
+  }
+
+  /**
+   * Fetch all restaurants.
+   */
+  static fetchReviewById(id, callback) {
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', DBHelper.RESTAURANT_REVIEWS_URL + `/${id}`);
+    xhr.onload = () => {
+      if (xhr.status === 200) { // Got a success response from server!
+        const restaurantReview = JSON.parse(xhr.responseText);
+        callback(null, restaurantReview);
       } else { // Oops!. Got an error from server.
         const error = (`Request failed. Returned status of ${xhr.status}`);
         callback(error, null);
@@ -114,7 +158,7 @@ class DBHelper {
         const neighborhoods = restaurants.map((v, i) => restaurants[i].neighborhood)
         // Remove duplicates from neighborhoods
         const uniqueNeighborhoods = neighborhoods.filter((v, i) => neighborhoods.indexOf(v) == i)
-        
+
         // Get all cuisines from all restaurants
         const cuisines = restaurants.map((v, i) => restaurants[i].cuisine_type)
         // Remove duplicates from cuisines
@@ -159,6 +203,52 @@ class DBHelper {
       }
     });
   }
+
+  /**
+   * Fetch all cuisines with proper error handling.
+   */
+  static saveRestaurantReviewRequest(id, name, rating, comments) {
+    let saveReviewParams = {
+      "restaurant_id": Number(id),
+      "name": name,
+      "rating": Number(rating),
+      "comments": comments
+    };
+
+    return {
+      url: DBHelper.RESTAURANT_REVIEWS_URL,
+      options: {
+        headers: {
+           "Content-Type": "application/json; charset=utf-8",
+        },
+        method: 'POST',
+        body: JSON.stringify(saveReviewParams)
+      }
+    }
+  }
+
+// use messagechannel to communicate
+static sendMessageToSw (msg) {
+  return new Promise((resolve, reject) => {
+    // Create a Message Channel
+    const msg_chan = new MessageChannel()
+
+    // Handler for recieving message reply from service worker
+    msg_chan.port1.onmessage = event => {
+      if(event.data.error) {
+        reject(event.data.error)
+      } else {
+        resolve(event.data)
+      }
+    }
+    navigator.serviceWorker.controller.postMessage(msg, [msg_chan.port2]);
+  })
+}
+// send message to serviceWorker
+// this is use to tell the serviceworker how to parse our data
+static sync (url, options) {
+  return DBHelper.sendMessageToSw({type: 'sync', url, options})
+}
 
   /**
    * Restaurant page URL.

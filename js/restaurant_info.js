@@ -1,6 +1,10 @@
 let restaurant;
 var map;
 
+document.addEventListener('DOMContentLoaded', (event) => {
+  registerServiceWorker();
+});
+
 /**
  * Initialize Google map, called from HTML.
  */
@@ -18,7 +22,19 @@ window.initMap = () => {
       DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
     }
   });
+  fetchRestaurantReviewsURL(fillReviewsHTML);
 }
+
+
+
+registerServiceWorker = () => {
+  if (!navigator.serviceWorker) return;
+
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    // Registration was successful
+    console.log('ServiceWorker registration successful with scope: ', reg.scope);
+  });
+};
 
 /**
  * Get current restaurant from page URL.
@@ -46,6 +62,30 @@ fetchRestaurantFromURL = (callback) => {
 }
 
 /**
+ * Get current restaurant from page URL.
+ */
+fetchRestaurantReviewsURL = (callback) => {
+  if (self.reviews) { // restaurant already fetched!
+    callback(self.reviews)
+    return;
+  }
+  const id = getParameterByName('id');
+  if (!id) { // no id found in URL
+    error = 'No restaurant id in URL'
+  } else {
+    DBHelper.fetchRestaurantReviews(id, (error, restaurantReviews) => {
+      self.reviews = restaurantReviews;
+      if (!restaurantReviews) {
+        console.error(error);
+        return;
+      }
+
+      callback(restaurantReviews)
+    });
+  }
+}
+
+/**
  * Create restaurant HTML and add it to the webpage
  */
 fillRestaurantHTML = (restaurant = self.restaurant) => {
@@ -67,8 +107,6 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
   if (restaurant.operating_hours) {
     fillRestaurantHoursHTML();
   }
-  // fill reviews
-  fillReviewsHTML();
 }
 
 /**
@@ -94,11 +132,26 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
 /**
  * Create all reviews HTML and add them to the webpage.
  */
-fillReviewsHTML = (reviews = self.restaurant.reviews) => {
+fillReviewsHTML = (reviews = self.reviews) => {
   const container = document.getElementById('reviews-container');
+  const reviewHeaderContainer = document.createElement('div');
   const title = document.createElement('h2');
   title.innerHTML = 'Reviews';
-  container.appendChild(title);
+  title.style.display = 'inline-block'
+  reviewHeaderContainer.appendChild(title);
+
+  const addReviewButton = document.createElement('button');
+  addReviewButton.innerHTML = 'Add Review';
+  addReviewButton.style.float = 'right';
+  reviewHeaderContainer.appendChild(addReviewButton);
+  container.appendChild(reviewHeaderContainer);
+
+  const ul = document.getElementById('reviews-list');
+  addReviewButton.addEventListener("click", function( event ) {
+    // display the current click count inside the clicked div
+    addReviewButton.disabled = true;
+    ul.insertBefore(createNewReviewForm(addReviewButton), ul.firstChild);
+  });
 
   if (!reviews) {
     const noReviews = document.createElement('p');
@@ -106,7 +159,7 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
     container.appendChild(noReviews);
     return;
   }
-  const ul = document.getElementById('reviews-list');
+
   reviews.forEach(review => {
     ul.appendChild(createReviewHTML(review));
   });
@@ -119,17 +172,17 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
 createReviewHTML = (review) => {
   const li = document.createElement('li');
   const reviewHeader = document.createElement('div');
-  reviewHeader.classList.add('review-header');    
+  reviewHeader.classList.add('review-header');
   const name = document.createElement('span');
   name.classList.add('reviewer-name');
   name.innerHTML = review.name;
-  reviewHeader.appendChild(name);        
+  reviewHeader.appendChild(name);
 
 
   const date = document.createElement('span');
-  date.innerHTML = review.date;
-  date.classList.add('review-date');    
-  reviewHeader.appendChild(date);    
+  date.innerHTML = new Date(review.createdAt).toLocaleString();
+  date.classList.add('review-date');
+  reviewHeader.appendChild(date);
   li.appendChild(reviewHeader);
 
   const ratingsContainer = document.createElement('p');
@@ -144,6 +197,182 @@ createReviewHTML = (review) => {
   li.appendChild(comments);
 
   return li;
+}
+
+/**
+ * Create new review form HTML and add it to the webpage.
+ */
+createNewReviewForm = (addReviewButton) => {
+  const li = document.createElement('li');
+  const reviewHeader = document.createElement('div');
+  reviewHeader.classList.add('review-header');
+  const name = document.createElement('span');
+  name.classList.add('reviewer-name');
+  name.innerHTML = 'Create new review';
+  reviewHeader.appendChild(name);
+  li.appendChild(reviewHeader);
+
+  const reviewForm = document.createElement('form');
+
+  //Create an input for name
+  var nameInput = createInput('name', 'text');
+  var nameLabel = document.createElement("Label");
+  nameLabel.innerHTML = "Name";
+  reviewForm.appendChild(nameLabel);
+  reviewForm.appendChild(nameInput);
+
+  //Create an input for rating
+  var ratingInput = createDropDown('rating', [0,1,2,3,4]);
+
+  var ratingLabel = document.createElement("Label");
+  ratingLabel.innerHTML = "Rating";
+  reviewForm.appendChild(ratingLabel);
+  reviewForm.appendChild(ratingInput);
+
+  //Create an input for comments
+  var commentsInput = document.createElement("textarea");
+  var commentsLabel = document.createElement("Label");
+  commentsLabel.innerHTML = "Comments";
+  reviewForm.appendChild(commentsLabel);
+  reviewForm.appendChild(commentsInput);
+
+  //Create button input to save review
+  var saveReviewInput = createInput('', 'submit');
+  saveReviewInput.value = 'Save Review';
+  reviewForm.appendChild(saveReviewInput);
+
+  saveReviewInput.addEventListener('click', function(event) {
+    event.preventDefault()
+    const name = nameInput.value;
+    const rating = ratingInput.value;
+    const comments = commentsInput.value;
+
+    name ? nameInput.classList.remove("invalid-input") : nameInput.classList.add("invalid-input");
+    rating !== '0' ? ratingInput.classList.remove("invalid-input") : ratingInput.classList.add("invalid-input");
+    comments ? commentsInput.classList.remove("invalid-input") : commentsInput.classList.add("invalid-input");
+
+    if(!name || rating === '0' || !comments) {
+      return;
+    }
+    const messageParagraph = document.createElement("p");
+    messageParagraph.innerHTML = 'Saving...';
+
+    let saveRestaurantReviewParams = DBHelper.saveRestaurantReviewRequest(getParameterByName('id'), name, rating, comments);
+    sync(saveRestaurantReviewParams.url, saveRestaurantReviewParams.options)
+      .then(response => {
+        li.removeChild(messageParagraph);
+      })
+      .catch(response => {
+
+        messageParagraph.innerHTML = `Error saving review. ${response}`;
+        messageParagraph.style.color = "Red";
+      })
+    const newReviewLi = createReviewHTML({
+      'name': name,
+      'createdAt': new Date().toLocaleString(),
+      'rating': rating,
+      'comments': comments
+    });
+
+    li.innerHTML = newReviewLi.innerHTML;
+    li.appendChild(messageParagraph);
+    addReviewButton.disabled = false;
+  });
+
+  //Create button input to cancel save review
+  var cancelReviewInput = createInput('', 'button');
+  cancelReviewInput.value = 'Cancel';
+  reviewForm.appendChild(cancelReviewInput);
+
+  cancelReviewInput.addEventListener('click', function() {
+    li.parentNode.removeChild(li)
+    addReviewButton.disabled = false;
+  });
+
+  li.appendChild(reviewForm);
+
+  return li;
+}
+
+/**
+ * This function does retry... Not used for now...
+ */
+saveRestaurantReview = function(name, rating, comments, li, retries = 1) {
+  const restaurantReviewResponseHandler = (error) => {
+    if(error) {
+      if(retries === 1) {
+        const errorParagraph = document.createElement("p");
+        errorParagraph.innerHTML = 'Error saving review. Retrying...';
+        errorParagraph.style.color = "Red";
+        errorParagraph.id = 'save-review-error';
+        li.appendChild(errorParagraph);
+      }
+      // retry with backoff
+      setTimeout(() => {
+         saveRestaurantReview(name, rating, comments, li, retries + 1);
+      }, retries * retries * 1000);
+    } else {
+      li.querySelector("#save-review-error").remove();
+    }
+  }
+  DBHelper.saveRestaurantReview(getParameterByName('id'), name, rating, comments, restaurantReviewResponseHandler);
+}
+
+handleReviewSaveResponse = function(error, restaurantReview) {
+  if(error) {
+    console.log(error);
+  } else {
+    console.log(restaurantReview);
+  }
+}
+
+createInput = function(name, type) {
+  var input = document.createElement("input");
+  //Assign different attributes to the element.
+  input.setAttribute("type", type);
+  input.setAttribute("name", name);
+
+  return input;
+}
+
+createDropDown = function(name, values) {
+  //Create and append select list
+  var selectList = document.createElement("select");
+  selectList.setAttribute("name", name);
+
+  //Create and append the options
+  for (var i = 0; i < values.length; i++) {
+    var option = document.createElement("option");
+    option.value = values[i];
+    option.text = values[i];
+    selectList.appendChild(option);
+  }
+
+  return selectList;
+}
+
+// use messagechannel to communicate
+sendMessageToSw = function(msg) {
+  return new Promise((resolve, reject) => {
+    // Create a Message Channel
+    const msg_chan = new MessageChannel()
+
+    // Handler for recieving message reply from service worker
+    msg_chan.port1.onmessage = event => {
+      if(event.data.error) {
+        reject(event.data.error)
+      } else {
+        resolve(event.data)
+      }
+    }
+
+    navigator.serviceWorker.controller.postMessage(msg, [msg_chan.port2]);
+  })
+}
+// send message to serviceWorker
+// this is use to tell the serviceworker how to parse our data
+sync = function(url, options) {
+  return sendMessageToSw({type: 'sync', url, options})
 }
 
 /**
