@@ -200,14 +200,14 @@ function servePhoto(request) {
   });
 }
 
+// Idea from https://stackoverflow.com/questions/41798009/pass-custom-data-to-service-worker-sync
 self.addEventListener('message', function(event) {
   if (event.data.action === 'skipWaiting') {
     self.skipWaiting();
   }
   if(event.data !== null && typeof event.data === 'object') {
     if(event.data.type === 'sync') {
-      // in this way, you can decide your tag
-      const id = event.data.id || uuid()
+      const id = uuid()
       // pass the port into the memory stor
       syncStore[id] = Object.assign({port: event.ports[0]}, event.data)
       self.registration.sync.register(id)
@@ -215,6 +215,7 @@ self.addEventListener('message', function(event) {
   }
 });
 
+//https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
 function uuid() {
   function s4() {
     return Math.floor((1 + Math.random()) * 0x10000)

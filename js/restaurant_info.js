@@ -355,10 +355,10 @@ createDropDown = function(name, values) {
 sendMessageToSw = function(msg) {
   return new Promise((resolve, reject) => {
     // Create a Message Channel
-    const msg_chan = new MessageChannel()
+    const messageChannel = new MessageChannel()
 
     // Handler for recieving message reply from service worker
-    msg_chan.port1.onmessage = event => {
+    messageChannel.port1.onmessage = event => {
       if(event.data.error) {
         reject(event.data.error)
       } else {
@@ -366,11 +366,10 @@ sendMessageToSw = function(msg) {
       }
     }
 
-    navigator.serviceWorker.controller.postMessage(msg, [msg_chan.port2]);
+    navigator.serviceWorker.controller.postMessage(msg, [messageChannel.port2]);
   })
 }
 // send message to serviceWorker
-// this is use to tell the serviceworker how to parse our data
 sync = function(url, options) {
   return sendMessageToSw({type: 'sync', url, options})
 }
