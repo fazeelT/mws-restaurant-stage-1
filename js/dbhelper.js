@@ -39,6 +39,28 @@ class DBHelper {
   }
 
   /**
+   * Toggle restaurant favorite.
+   */
+  static toggleRestaurantFavorite(id, favorite, callback) {
+    let xhr = new XMLHttpRequest();
+    xhr.open('PUT', DBHelper.RESTAURANTS_URL + `/${id}/?is_favorite=${favorite}`);
+    xhr.onload = () => {
+      if (xhr.status === 200) { // Got a success response from server!
+        const response = JSON.parse(xhr.responseText);
+        callback(null);
+      } else { // Oops!. Got an error from server.
+        const error = (`Request failed. Returned status of ${xhr.status}`);
+        callback(error);
+      }
+    };
+    xhr.onerror = () => {
+      const error = (`Request failed. Returned status of ${xhr.status}`);
+      callback(error);
+    };
+    xhr.send();
+  }
+
+  /**
    * Fetch all restaurants.
    */
   static fetchRestaurantReviews(id, callback) {

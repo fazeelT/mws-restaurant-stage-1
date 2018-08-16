@@ -1,9 +1,52 @@
-### To run this project:
+# Restaurant Reviews
 
-1. This app depends on service for data which is available [here](https://github.com/udacity/mws-restaurant-stage-2)
+Simple app that allows to review restaurants, mark restaurant as favorite. It uses backend service(https://github.com/udacity/mws-restaurant-stage-3) to fetch/create reviews, fetch restaurants and mark restaurants as favorite/unfavorite.
 
-2. In this folder, start up a simple HTTP server to serve up the site files on your local computer. Python has some simple tools to do this, and you don't even need to know Python. For most people, it's already installed on your computer. 
+## Getting Started
 
-In a terminal, check the version of Python you have: `python -V`. If you have Python 2.x, spin up the server with `python -m SimpleHTTPServer 8000` (or some other port, if port 8000 is already in use.) For Python 3.x, you can use `python3 -m http.server 8000`. If you don't have Python installed, navigate to Python's [website](https://www.python.org/) to download and install the software.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
 
-3. With your server running, visit the site: `http://localhost:8000`.
+### Prerequisites
+
+* Python
+```
+check python version $python -V
+If you don't have Python installed, navigate to Python's [website](https://www.python.org/) to download and install the software.
+```
+* Backend service
+```
+git clone https://github.com/udacity/mws-restaurant-stage-3
+```
+
+### Installing
+
+Start backend Service
+
+```
+npm install
+node server
+```
+
+Run python server
+
+```
+Python 2.x: $python -m SimpleHTTPServer 8000 (or some other port, if port 8000 is already in use.)
+For Python 3.x: $python3 -m http.server 8000.
+```
+
+With your server running, visit the site: `http://localhost:8000`.
+
+## Built With
+
+* [Service worker](https://developers.google.com/web/fundamentals/primers/service-workers/)
+* [python server](https://docs.python.org/2/library/simplehttpserver.html)
+
+## Authors
+
+* **Udacity Instructor** - *Initial work*
+
+See also the list of [contributors](https://github.com/fazeelT/mws-restaurant-stage-1/graphs/contributors) who participated in this project.
+
+## Acknowledgments
+
+* This code is fork of [mws-restaurant-stage-1](https://github.com/udacity/mws-restaurant-stage-1)

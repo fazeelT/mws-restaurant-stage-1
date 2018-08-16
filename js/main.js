@@ -5,6 +5,11 @@ var map
 var markers = []
 let lazy = [];
 
+const UN_FAVORITE_ICON_CHAR_CODE = 9734;
+const FAVORITE_ICON_CHAR_CODE = 9733;
+const FAVORITE_TOOLTIP = 'Mark as Favorite';
+const UN_FAVORITE_TOOLTIP = 'Mark as Unfavorite';
+
 /**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
  */
@@ -148,6 +153,25 @@ createRestaurantHTML = (restaurant) => {
   li.append(image);
   lazy.push(image);
 
+  const favoriteButton = document.createElement('button');
+  favoriteButton.classList.add('favorite-button');
+  const is_favorite = restaurant.is_favorite ? restaurant.is_favorite : false;
+  favoriteButton.innerHTML = is_favorite ? getIcon(FAVORITE_ICON_CHAR_CODE) : getIcon(UN_FAVORITE_ICON_CHAR_CODE);
+  favoriteButton.title = is_favorite ? UN_FAVORITE_TOOLTIP : FAVORITE_TOOLTIP;
+  li.append(favoriteButton);
+
+  favoriteButton.addEventListener('click', function() {
+    DBHelper.toggleRestaurantFavorite(restaurant.id, getCharCode(favoriteButton.innerHTML) === UN_FAVORITE_ICON_CHAR_CODE, function(error) {
+      if(error) {
+        favoriteButton.title = `Failed, Try again. ${favoriteButton.title}`;
+        return;
+      }
+      const charCode = getCharCode(favoriteButton.innerHTML) === UN_FAVORITE_ICON_CHAR_CODE ? FAVORITE_ICON_CHAR_CODE : UN_FAVORITE_ICON_CHAR_CODE;
+      favoriteButton.innerHTML = getIcon(charCode);
+      favoriteButton.title = favoriteButton.title === FAVORITE_TOOLTIP ? UN_FAVORITE_TOOLTIP : FAVORITE_TOOLTIP;
+    })
+  });
+
   const name = document.createElement('h1');
   name.innerHTML = restaurant.name;
   li.append(name);
@@ -167,6 +191,14 @@ createRestaurantHTML = (restaurant) => {
   li.append(more)
 
   return li
+}
+
+getIcon = (charCode) => {
+  return `&#${charCode};`;
+}
+
+getCharCode = (symbol) => {
+  return symbol.charCodeAt(0);
 }
 
 /**

@@ -69,6 +69,18 @@ input[type=button] {
     float: right;
     margin-bottom: 10px;
 }
+.favorite-button {
+    background-color: white;
+    border: none;
+    padding: 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 30px;
+    margin: 4px 2px;
+		border-radius: 50%;
+		float: right;
+}
 form {
     padding: 20px;
 }
