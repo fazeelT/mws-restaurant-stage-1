@@ -16,12 +16,55 @@ const UN_FAVORITE_TOOLTIP = 'Mark as Unfavorite';
 document.addEventListener('DOMContentLoaded', (event) => {
   registerServiceWorker();
   fetchNeighbourhoodsAndCuisines();
+  initializeStaticMap();
 
   registerListener('load', lazyLoad);
   registerListener('scroll', lazyLoad);
   registerListener('resize', lazyLoad);
 
 });
+
+initializeStaticMap = () => {
+
+  const cSelect = document.getElementById('cuisines-select');
+  const nSelect = document.getElementById('neighborhoods-select');
+
+  const cIndex = cSelect.selectedIndex;
+  const nIndex = nSelect.selectedIndex;
+
+  const cuisine = cSelect[cIndex].value;
+  const neighborhood = nSelect[nIndex].value;
+
+  DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
+    if (error) { // Got an error!
+      console.error(error);
+    } else {
+      fillStaticMapImage(restaurants);
+      resetRestaurants(restaurants);
+      fillRestaurantsHTML();
+    }
+  });
+
+}
+
+fillStaticMapImage = (restaurants) => {
+  const mapStaticUrl = new URL('https://maps.googleapis.com/maps/api/staticmap');
+  mapStaticUrl.searchParams.set('key', 'AIzaSyDs7Q5sHMAl_FxNNvmx-dwbnomMf0xPfyQ');
+  mapStaticUrl.searchParams.set('center', '40.722216,-73.987501');
+  mapStaticUrl.searchParams.set('size', '600x400');
+  mapStaticUrl.searchParams.set('zoom', '12');
+
+  restaurants.forEach(restaurant => {
+    const marker = DBHelper.mapLocationForRestaurant(restaurant);
+    mapStaticUrl.searchParams.append('markers', `${marker.position.lat},${marker.position.lng}`);
+  });
+  const staticMapImage = document.createElement('img');
+  staticMapImage.setAttribute('src', mapStaticUrl);
+  staticMapImage.alt = 'Map with restaurants';
+  staticMapImage.id = 'map';
+
+  document.getElementById('map-container').append(staticMapImage);
+}
 
 registerServiceWorker = () => {
   if (!navigator.serviceWorker) return;
@@ -76,45 +119,6 @@ fillCuisinesHTML = (cuisines = self.cuisines) => {
 }
 
 /**
- * Initialize Google map, called from HTML.
- */
-window.initMap = () => {
-  let loc = {
-    lat: 40.722216,
-    lng: -73.987501
-  };
-  self.map = new google.maps.Map(document.getElementById('map'), {
-    zoom: 12,
-    center: loc,
-    scrollwheel: false
-  });
-  updateRestaurants();
-}
-
-/**
- * Update page and map for current restaurants.
- */
-updateRestaurants = () => {
-  const cSelect = document.getElementById('cuisines-select');
-  const nSelect = document.getElementById('neighborhoods-select');
-
-  const cIndex = cSelect.selectedIndex;
-  const nIndex = nSelect.selectedIndex;
-
-  const cuisine = cSelect[cIndex].value;
-  const neighborhood = nSelect[nIndex].value;
-
-  DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
-    if (error) { // Got an error!
-      console.error(error);
-    } else {
-      resetRestaurants(restaurants);
-      fillRestaurantsHTML();
-    }
-  })
-}
-
-/**
  * Clear current restaurants, their HTML and remove their map markers.
  */
 resetRestaurants = (restaurants) => {
@@ -137,7 +141,6 @@ fillRestaurantsHTML = (restaurants = self.restaurants) => {
   restaurants.forEach(restaurant => {
     ul.append(createRestaurantHTML(restaurant));
   });
-  addMarkersToMap();
 }
 
 /**
@@ -148,7 +151,7 @@ createRestaurantHTML = (restaurant) => {
 
   const image = document.createElement('img');
   image.className = 'restaurant-img';
-  image.alt = restaurant.name + " image";
+  image.alt = `An image of ${restaurant.name}`;
   image.setAttribute('data-src', DBHelper.imageUrlForRestaurant(restaurant));
   li.append(image);
   lazy.push(image);
@@ -172,7 +175,7 @@ createRestaurantHTML = (restaurant) => {
     })
   });
 
-  const name = document.createElement('h1');
+  const name = document.createElement('h2');
   name.innerHTML = restaurant.name;
   li.append(name);
 
@@ -199,20 +202,6 @@ getIcon = (charCode) => {
 
 getCharCode = (symbol) => {
   return symbol.charCodeAt(0);
-}
-
-/**
- * Add markers for current restaurants to the map.
- */
-addMarkersToMap = (restaurants = self.restaurants) => {
-  restaurants.forEach(restaurant => {
-    // Add marker to the map
-    const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
-    google.maps.event.addListener(marker, 'click', () => {
-      window.location.href = marker.url
-    });
-    self.markers.push(marker);
-  });
 }
 
 /**

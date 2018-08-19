@@ -3,21 +3,18 @@ var map;
 
 document.addEventListener('DOMContentLoaded', (event) => {
   registerServiceWorker();
+  initializeStaticMap();
 });
 
 /**
  * Initialize Google map, called from HTML.
  */
-window.initMap = () => {
+initializeStaticMap = () => {
   fetchRestaurantFromURL((error, restaurant) => {
     if (error) { // Got an error!
       console.error(error);
     } else {
-      self.map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 16,
-        center: restaurant.latlng,
-        scrollwheel: false
-      });
+      fillStaticMapImage(restaurant);
       fillBreadcrumb();
       DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
     }
@@ -25,7 +22,23 @@ window.initMap = () => {
   fetchRestaurantReviewsURL(fillReviewsHTML);
 }
 
+fillStaticMapImage = (restaurant) => {
+  const mapStaticUrl = new URL('https://maps.googleapis.com/maps/api/staticmap');
+  mapStaticUrl.searchParams.set('key', 'AIzaSyDs7Q5sHMAl_FxNNvmx-dwbnomMf0xPfyQ');
+  mapStaticUrl.searchParams.set('center', `${restaurant.latlng.lat}x${restaurant.latlng.lng}`);
+  mapStaticUrl.searchParams.set('size', '600x400');
+  mapStaticUrl.searchParams.set('zoom', '16');
 
+  const marker = DBHelper.mapLocationForRestaurant(restaurant);
+  mapStaticUrl.searchParams.append('markers', `${marker.position.lat},${marker.position.lng}`);
+
+  const staticMapImage = document.createElement('img');
+  staticMapImage.setAttribute('src', mapStaticUrl);
+  staticMapImage.alt = 'Map with restaurants';
+  staticMapImage.id = 'map';
+
+  document.getElementById('map-container').append(staticMapImage);
+}
 
 registerServiceWorker = () => {
   if (!navigator.serviceWorker) return;

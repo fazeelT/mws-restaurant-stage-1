@@ -299,7 +299,9 @@ header {
 }
 #reviews-container, #restaurant-container, #map-container {
   padding-bottom: 20px;
+	text-align: center;
 }
+
 #reviews-container h2 {
   color: #f58500;
   font-size: 24pt;
