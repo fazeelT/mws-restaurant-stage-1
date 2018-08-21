@@ -228,24 +228,28 @@ createNewReviewForm = (addReviewButton) => {
   const reviewForm = document.createElement('form');
 
   //Create an input for name
-  var nameInput = createInput('name', 'text');
+  var nameInput = createInput('name', 'text', 'name-input');
   var nameLabel = document.createElement("Label");
   nameLabel.innerHTML = "Name";
+  nameLabel.setAttribute('for', 'name-input')
   reviewForm.appendChild(nameLabel);
   reviewForm.appendChild(nameInput);
 
   //Create an input for rating
-  var ratingInput = createDropDown('rating', [0,1,2,3,4]);
+  var ratingInput = createDropDown('rating', [0,1,2,3,4], 'rating-input');
 
   var ratingLabel = document.createElement("Label");
   ratingLabel.innerHTML = "Rating";
+  ratingLabel.setAttribute('for', 'rating-input')
   reviewForm.appendChild(ratingLabel);
   reviewForm.appendChild(ratingInput);
 
   //Create an input for comments
   var commentsInput = document.createElement("textarea");
+  commentsInput.id = 'comments-input';
   var commentsLabel = document.createElement("Label");
   commentsLabel.innerHTML = "Comments";
+  commentsLabel.setAttribute('for', 'comments-input');
   reviewForm.appendChild(commentsLabel);
   reviewForm.appendChild(commentsInput);
 
@@ -339,19 +343,21 @@ handleReviewSaveResponse = function(error, restaurantReview) {
   }
 }
 
-createInput = function(name, type) {
+createInput = function(name, type, id) {
   var input = document.createElement("input");
   //Assign different attributes to the element.
   input.setAttribute("type", type);
   input.setAttribute("name", name);
+  input.id = id;
 
   return input;
 }
 
-createDropDown = function(name, values) {
+createDropDown = function(name, values, id) {
   //Create and append select list
   var selectList = document.createElement("select");
   selectList.setAttribute("name", name);
+  selectList.id = id;
 
   //Create and append the options
   for (var i = 0; i < values.length; i++) {
@@ -393,7 +399,11 @@ sync = function(url, options) {
 fillBreadcrumb = (restaurant=self.restaurant) => {
   const breadcrumb = document.getElementById('breadcrumb');
   const li = document.createElement('li');
-  li.innerHTML = restaurant.name;
+  const a = document.createElement('a');
+  a.setAttribute('href', `restaurant.html?id=${restaurant.id}`);
+  a.setAttribute('aria-current', 'page');
+  a.innerHTML = restaurant.name;
+  li.appendChild(a);
   breadcrumb.appendChild(li);
 }
 
