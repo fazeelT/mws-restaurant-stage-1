@@ -43,7 +43,7 @@ class DBHelper {
    */
   static toggleRestaurantFavorite(id, favorite, callback) {
     let xhr = new XMLHttpRequest();
-    xhr.open('PUT', DBHelper.RESTAURANTS_URL + `/${id}/?is_favorite=${favorite}`);
+    xhr.open('PUT', DBHelper.RESTAURANTS_URL + `/${id}/?is_favorite=${favorite ? 'true': 'false'}`);
     xhr.onload = () => {
       if (xhr.status === 200) { // Got a success response from server!
         const response = JSON.parse(xhr.responseText);
@@ -57,7 +57,7 @@ class DBHelper {
       const error = (`Request failed. Returned status of ${xhr.status}`);
       callback(error);
     };
-    xhr.send();
+    xhr.send(`is_favorite=${favorite}`);
   }
 
   /**

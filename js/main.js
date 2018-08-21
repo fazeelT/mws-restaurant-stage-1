@@ -63,7 +63,9 @@ fillStaticMapImage = (restaurants) => {
   staticMapImage.alt = 'Map with restaurants';
   staticMapImage.id = 'map';
 
-  document.getElementById('map-container').append(staticMapImage);
+  const staticMapContainer = document.getElementById('map-container');
+  staticMapContainer.innerHTML = '';
+  staticMapContainer.append(staticMapImage);
 }
 
 registerServiceWorker = () => {
@@ -158,7 +160,7 @@ createRestaurantHTML = (restaurant) => {
 
   const favoriteButton = document.createElement('button');
   favoriteButton.classList.add('favorite-button');
-  const is_favorite = restaurant.is_favorite ? restaurant.is_favorite : false;
+  const is_favorite = 'true' === restaurant.is_favorite;
   favoriteButton.innerHTML = is_favorite ? getIcon(FAVORITE_ICON_CHAR_CODE) : getIcon(UN_FAVORITE_ICON_CHAR_CODE);
   favoriteButton.title = is_favorite ? UN_FAVORITE_TOOLTIP : FAVORITE_TOOLTIP;
   li.append(favoriteButton);

@@ -96,7 +96,7 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  if (requestUrl.origin === serviceUrl) {
+  if (event.request.method === 'GET' &&nrequestUrl.origin === serviceUrl) {
     event.respondWith(serveDataFromIndexDB(event.request));
     return;
   }
